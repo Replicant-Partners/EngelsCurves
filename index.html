@@ -97,6 +97,11 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
   .institutional-data strong{color:var(--ink);font-weight:400}
   .market-note{border-left:2px solid var(--red);padding:9px 12px;max-width:52rem;font-size:15px;color:var(--gray)}
   .market-note strong{color:var(--ink);font-weight:400}
+  .references{border-top:1px solid var(--hair);padding-top:22px;max-width:52rem;font-size:16px}
+  .references h2{font-size:25px}
+  .references ol{padding-left:24px}
+  .references li{padding:5px 0}
+  .references a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--hair)}
 input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
 @media (max-width:760px){
   .row{grid-template-columns:minmax(0,1fr)}
@@ -242,6 +247,19 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       <aside></aside>
     </div>
     <div id="institutionalData" class="institutional-data">Loading Shiller and Milliman data…</div>
+  </section>
+  <section id="referencias" class="references">
+    <h2><span class="num">References</span>Data sources and methodology</h2>
+    <p>Observed market and institutional data come from the official sources below. The selected observation date and retrieval date are shown in the Details panel above.</p>
+    <ol>
+      <li><a href="https://fred.stlouisfed.org/series/DGS30" target="_blank" rel="noreferrer">Federal Reserve Bank of St. Louis, FRED - DGS30</a>. 30-year US Treasury constant-maturity yield; daily; percent.</li>
+      <li><a href="https://fred.stlouisfed.org/series/BAMLC0A2CAAEY" target="_blank" rel="noreferrer">ICE Data Indices / FRED - BAMLC0A2CAAEY</a>. ICE BofA AA US Corporate Index effective yield; daily close; percent.</li>
+      <li><a href="https://fred.stlouisfed.org/series/T10YIE" target="_blank" rel="noreferrer">Federal Reserve Bank of St. Louis, FRED - T10YIE</a>. 10-year Treasury inflation breakeven; daily; percent.</li>
+      <li><a href="https://fred.stlouisfed.org/series/CPIAUCSL" target="_blank" rel="noreferrer">US Bureau of Labor Statistics / FRED - CPIAUCSL</a>. Consumer Price Index for All Urban Consumers; monthly; index.</li>
+      <li><a href="https://shillerdata.com/" target="_blank" rel="noreferrer">Robert J. Shiller, Shiller Data</a>. Monthly CAPE and long-run US stock-market data. The application uses the versioned snapshot downloaded from the official site.</li>
+      <li><a href="https://www.milliman.com/en/insight/pension-funding-index-october-2026" target="_blank" rel="noreferrer">Milliman 100 Pension Funding Index</a>. Latest published funded ratio and corporate discount-rate context; not an automatic input to the plan assumptions.</li>
+    </ol>
+    <p><strong>Model assumptions:</strong> USD 1 million paid annually for 30 years, selected discount rate, hedge ratio, actuarial target, and de-risking trigger are user-editable assumptions. Present value, duration, convexity and allocation are calculated by this application from those inputs; they are not published observations.</p>
   </section>
 </article>
 
