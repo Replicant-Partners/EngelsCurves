@@ -67,6 +67,9 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
 .ctrls .hd{display:flex;justify-content:space-between;gap:8px;font-style:italic;color:var(--gray)}
 .ctrls .hd output{font-style:normal;color:var(--red);font-variant-numeric:lining-nums tabular-nums}
 .ctrls input[type=range]{width:100%;accent-color:var(--red);margin:0}
+  .tabs{display:flex;gap:8px;margin-top:18px;border-bottom:1px solid var(--hair);padding-bottom:8px}
+  .tabs button{font:inherit;font-size:16px;background:transparent;border:0;border-bottom:2px solid transparent;padding:5px 2px;color:var(--gray);cursor:pointer}
+  .tabs button.active,.tabs button:hover{color:var(--ink);border-color:var(--red)}
   .data-status{font-size:14px;color:var(--gray);border-left:2px solid var(--red);padding-left:10px;max-width:52rem}
   .data-status strong{color:var(--ink);font-weight:400}
   .data-tools{display:flex;align-items:center;gap:16px;flex-wrap:wrap;max-width:52rem;font-size:14px}
@@ -97,6 +100,13 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
   .institutional-data strong{color:var(--ink);font-weight:400}
   .market-note{border-left:2px solid var(--red);padding:9px 12px;max-width:52rem;font-size:15px;color:var(--gray)}
   .market-note strong{color:var(--ink);font-weight:400}
+  .evidence-summary{display:flex;gap:14px;align-items:baseline;border-left:2px solid var(--red);padding:9px 12px;max-width:52rem;color:var(--gray)}
+  .evidence-summary strong{color:var(--ink);font-weight:400}
+  .evidence-table{font-size:14px;width:100%;max-width:70rem}
+  .evidence-table th,.evidence-table td{padding:6px 12px 6px 0;text-align:left;border-bottom:1px solid var(--hair);vertical-align:top}
+  .evidence-table th{font-style:italic}
+  .evidence-table .supportive{color:var(--ink)}
+  .evidence-table .unavailable{color:var(--gray)}
   .references{border-top:1px solid var(--hair);padding-top:22px;max-width:52rem;font-size:16px}
   .references h2{font-size:25px}
   .references ol{padding-left:24px}
@@ -114,6 +124,10 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   <header>
     <h1>Pension Immunization</h1>
     <p class="sub">Interest rates, long-dated liabilities and asset allocation</p>
+    <nav class="tabs" aria-label="Main views">
+      <button type="button" class="active" data-tab="analysis">Analysis</button>
+      <button type="button" data-tab="evidence">Evidence monitor</button>
+    </nav>
     <div class="data-tools">
       <div id="dataStatus" class="data-status" role="status">Loading latest market data…</div>
       <label for="valuationDate">Valuation date <input id="valuationDate" type="date"></label>
@@ -248,6 +262,24 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     </div>
     <div id="institutionalData" class="institutional-data">Loading Shiller and Milliman data…</div>
   </section>
+  <section id="evidence" class="evidence-view" hidden>
+    <h2><span class="num">VI</span>Evidence monitor</h2>
+    <div class="row">
+      <p>Each conclusion is treated as a hypothesis. The monitor looks for market footprints that would be consistent with pension plans selling equities and buying long-duration bonds.</p>
+      <aside><p>Indirect signals cannot identify pension trades by themselves. Confidence increases only when several independent signals point in the same direction.</p></aside>
+    </div>
+    <div class="evidence-summary"><strong id="evidenceStatus">Loading evidence...</strong><span id="evidenceUpdated"></span></div>
+    <div class="tbl"><table class="evidence-table"><thead><tr><th>Test</th><th>Expected footprint</th><th>Latest reading</th><th>Status</th><th>Source</th></tr></thead><tbody id="evidenceRows">
+      <tr><td>10s30s versus 2s10s</td><td>Long end stays flatter while the 2s10s curve steepens</td><td>Loading...</td><td>Loading</td><td>FRED</td></tr>
+      <tr><td>Pension asset flows</td><td>More Treasury/corporate bonds and fewer equities</td><td>Not integrated</td><td>Unavailable</td><td>Federal Reserve Z.1</td></tr>
+      <tr><td>Long credit versus intermediate</td><td>Long high-quality credit holds up better</td><td>Not integrated</td><td>Unavailable</td><td>ICE BofA / FRED</td></tr>
+      <tr><td>Long Treasury auctions</td><td>Strong coverage and indirect demand</td><td>Not integrated</td><td>Unavailable</td><td>US Treasury</td></tr>
+      <tr><td>Quarter-end rebalancing</td><td>Equities lag bonds after strong equity quarters</td><td>Not integrated</td><td>Unavailable</td><td>Market data</td></tr>
+      <tr><td>Risk transfers to insurers</td><td>Higher pension risk-transfer volume</td><td>Not integrated</td><td>Unavailable</td><td>LIMRA</td></tr>
+    </tbody></table></div>
+    <p class="lectura"><b>Interpretation</b><span id="evidenceInterpretation">The monitor is intentionally conservative: unavailable tests are excluded from the evidence balance.</span></p>
+  </section>
+
   <section id="referencias" class="references">
     <h2><span class="num">References</span>Data sources and methodology</h2>
     <p>Observed market and institutional data come from the official sources below. The selected observation date and retrieval date are shown in the Details panel above.</p>
@@ -462,6 +494,26 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       (eq<=tg?' Because your equity assumption sits below the target, its curve does not appear on the chart.':'');
   }
 
+  let evidenceLoaded=false;
+  function showTab(tab){
+    document.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('active',button.dataset.tab===tab));
+    document.querySelectorAll('article > section').forEach(section=>{section.hidden=tab==='evidence'?section.id!=='evidence'&&section.id!=='referencias':section.id==='evidence'});
+    if(tab==='evidence'&&!evidenceLoaded)loadEvidence();
+  }
+  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.tab)));
+  async function loadEvidence(){
+    const rows=$('evidenceRows'), status=$('evidenceStatus'), updated=$('evidenceUpdated');
+    try{
+      const series=await Promise.all(['DGS2','DGS10','DGS30'].map(async id=>[id,await fredLatest(id)]));
+      const values=Object.fromEntries(series), slope10s30s=values.DGS30.value-values.DGS10.value, slope2s10s=values.DGS10.value-values.DGS2.value;
+      const supportive=slope10s30s<0&&slope2s10s>0, contradictory=slope10s30s>0&&slope2s10s>0;
+      const signal=supportive?'Supportive':contradictory?'Contradictory':'Neutral';
+      rows.querySelector('tr').innerHTML='<td>10s30s versus 2s10s</td><td>Long end stays flatter while the 2s10s curve steepens</td><td>10s30s '+fmt(slope10s30s)+' pp; 2s10s '+fmt(slope2s10s)+' pp</td><td class="'+signal.toLowerCase()+'">'+signal+'</td><td>FRED DGS2, DGS10, DGS30</td>';
+      status.textContent='Evidence balance: '+signal;updated.textContent='Latest observations: '+values.DGS30.date;
+      $('evidenceInterpretation').textContent=supportive?'The curve configuration is consistent with demand concentrated in the long end, but it is not proof of pension buying.':contradictory?'The long-end signal does not support a pension-demand explanation in this observation.':'The curve does not provide a clear pension-demand signal.';
+      evidenceLoaded=true;
+    }catch(error){status.textContent='Evidence unavailable';updated.textContent='FRED data could not be loaded.';}
+  }
   function syncControls(){
     document.querySelectorAll('input[data-key]').forEach(i=>i.value=S[i.dataset.key]);
     document.querySelectorAll('output[data-key]').forEach(o=>o.textContent=show(o.dataset.key));

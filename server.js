@@ -13,7 +13,7 @@ function number(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-const fredAllowlist = new Set(['DGS30', 'BAMLC0A2CAAEY', 'T10YIE', 'CPIAUCSL']);
+const fredAllowlist = new Set(['DGS2', 'DGS10', 'DGS30', 'BAMLC0A2CAAEY', 'T10YIE', 'CPIAUCSL']);
 async function fredLatest(id, cutoff) {
   if (!fredAllowlist.has(id)) throw new Error('Unsupported FRED series');
   const end = cutoff ? `&coed=${encodeURIComponent(cutoff)}` : '';
