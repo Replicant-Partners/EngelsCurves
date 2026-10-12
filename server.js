@@ -83,6 +83,11 @@ const server = createServer(async (request, response) => {
       response.end(await readFile('index.html'));
       return;
     }
+    if (request.url === '/calculations.js') {
+      response.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+      response.end(await readFile('calculations.js'));
+      return;
+    }
     response.statusCode = 404;
     response.end('Not found');
   } catch (error) {

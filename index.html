@@ -192,11 +192,13 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   </section>
 </article>
 
-<script>
+<script src="calculations.js"></script>
+<script></script>
 (function(){
+  const PC=window.PensionCalculations;
   const N=30, BASE=0.05;
-  const pvL=r=>(1-Math.pow(1+r,-N))/r;
-  const macD=r=>(1+r)/r - N/(Math.pow(1+r,N)-1);
+  const pvL=r=>PC.presentValue(r,N);
+  const macD=r=>PC.macaulayDuration(r,N);
   const L0=pvL(BASE), D0=macD(BASE);
   const t1=5,t2=25,w=(t2-D0)/(t2-t1);
   const F1=w*L0*Math.pow(1+BASE,t1), F2=(1-w)*L0*Math.pow(1+BASE,t2);
@@ -350,7 +352,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   }
 
   // ---------- Gráfica 3: asignación ----------
-  const need=(b,eq,tg)=>b>=tg?0:(eq<=b?Infinity:(tg-b)/(eq-b));
+  const need=(b,eq,tg)=>PC.requiredEquityWeight(b/100,eq/100,tg/100);
   function alloc(c,eq,tg){
     const s=$('alloc'); while(s.firstChild)s.removeChild(s.firstChild);
     const out=$('alOut');
