@@ -74,9 +74,17 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
   .data-tools input[type=date],.data-tools button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--hair);padding:4px 7px}
   .data-tools button{cursor:pointer}
   .data-tools button:hover{border-color:var(--ink)}
+  .status-badge{font-size:12px;letter-spacing:.04em;padding:3px 6px;border:1px solid var(--hair)}
+  .status-badge.live{color:var(--ink)}
+  .status-badge.manual{color:var(--red);border-color:var(--red)}
   .scenario-tools{display:flex;gap:7px;flex-wrap:wrap;max-width:52rem}
   .scenario-tools button{font:inherit;font-size:14px;color:var(--ink);background:transparent;border:1px solid var(--hair);padding:4px 8px;cursor:pointer}
   .scenario-tools button:hover,.scenario-tools button.active{border-color:var(--red);color:var(--red)}
+  .compare-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:52rem;font-size:14px;color:var(--gray)}
+  .compare-tools select,.compare-tools button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--hair);padding:4px 7px;cursor:pointer}
+  .compare-output{max-width:52rem;font-size:15px;color:var(--gray)}
+  .compare-output table{font-size:14px;margin-top:8px}
+  .compare-output th,.compare-output td{padding:4px 14px 4px 0;text-align:left;border-bottom:1px solid var(--hair)}
   .sources{max-width:70rem;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding-block:9px}
   .sources summary{cursor:pointer;font-size:15px;color:var(--gray)}
   .sources table{font-size:13px;margin-top:9px;width:100%}
@@ -105,6 +113,8 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       <div id="dataStatus" class="data-status" role="status">Loading latest market data…</div>
       <label for="valuationDate">Valuation date <input id="valuationDate" type="date"></label>
       <button id="latestData" type="button">Use latest</button>
+      <button id="resetAssumptions" type="button">Reset assumptions</button>
+      <span id="marketMode" class="status-badge live">LIVE MARKET DATA</span>
     </div>
     <div class="scenario-tools" aria-label="Saved historical scenarios">
       <button type="button" data-scenario="2000-12-31">2000</button>
@@ -113,6 +123,12 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       <button type="button" data-scenario="2021-12-31">2021</button>
       <button type="button" data-scenario="latest">Latest</button>
     </div>
+    <div class="compare-tools">
+      <label for="compareScenario">Compare historical scenario</label>
+      <select id="compareScenario"><option value="2000-12-31">2000</option><option value="2007-12-31">2007</option><option value="2019-12-31">2019</option><option value="2021-12-31">2021</option></select>
+      <button id="compareButton" type="button">Compare to latest</button>
+    </div>
+    <div id="compareOutput" class="compare-output" aria-live="polite"></div>
     <details class="sources" open>
       <summary>Details - data sources and assumptions</summary>
       <div class="tbl">
@@ -194,6 +210,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     </div>
     <div class="ctrls" data-keys="r"></div>
     <p class="lectura"><b>reading</b>At the chosen rate, the Macaulay duration of these liabilities is <span class="r" id="dMac">–</span> years and the modified duration is <span class="r" id="dMod">–</span>, so a one-point move in rates shifts the liabilities by roughly <span class="r" id="dPer">–</span>.</p>
+    <p class="lectura"><b>money</b><span id="moneyOut">–</span></p></b>
   </section>
 
   <section id="bonos">
@@ -334,6 +351,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   function mec(){
     const p=val('r'), r=p/100, L=pvL(r), mac=macD(r), mod=mac/(1+r);
     $('dMac').textContent=fmt(mac); $('dMod').textContent=fmt(mod); $('dPer').textContent=fmt(mod)+'%';
+    $('moneyOut').textContent='At a '+fmt(p)+'% discount rate, liabilities are approximately USD '+fmt(L)+' million. A one-point move changes their value by about USD '+fmt(L*mod*.01)+' million.';
     const rows=[[-2,'Rates down 2 pp'],[-1,'Rates down 1 pp'],[0,'Chosen rate'],[1,'Rates up 1 pp'],[2,'Rates up 2 pp']];
     $('mecBody').innerHTML=rows.map(([d,n])=>{
       const rr=r+d/100; if(rr<=0)return '';
@@ -430,6 +448,17 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     document.querySelectorAll('input[data-key]').forEach(i=>i.value=S[i.dataset.key]);
     document.querySelectorAll('output[data-key]').forEach(o=>o.textContent=show(o.dataset.key));
   }
+  const assumptionKeys=['r','cob','tgt','thr'];
+  const marketKeys=['refG','refC','cape','infl'];
+  function setMarketMode(mode){
+    const badge=$('marketMode');
+    badge.textContent=mode==='manual'?'MANUAL OVERRIDE':'LIVE MARKET DATA';
+    badge.className='status-badge '+(mode==='manual'?'manual':'live');
+  }
+  function resetAssumptions(){
+    assumptionKeys.forEach(key=>{S[key]=P[key].v;try{localStorage.removeItem('pim-'+key)}catch(error){}});
+    syncControls();drawRefs();all();cmpAll();renderSources();
+  }
   let liveObservations={};
   let institutionalData={};
   const sourceMeta={
@@ -488,7 +517,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       if(key!=='cpi')S[key]=observation.value;
     }
     if(observations.length){
-      syncControls();drawRefs();all();cmpAll();
+      syncControls();drawRefs();all();cmpAll();setMarketMode('live');
       $('dataStatus').innerHTML='<strong>'+label+':</strong> '+observations.join(' · ')+' · Source: FRED';
     }else $('dataStatus').textContent='Live data unavailable; showing saved or illustrative assumptions.';
     renderSources();
@@ -501,6 +530,8 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   document.querySelectorAll('[data-scenario]').forEach(button=>button.addEventListener('click',()=>setScenario(button.dataset.scenario==='latest'?undefined:button.dataset.scenario)));
   $('valuationDate').addEventListener('change',e=>setScenario(e.target.value||undefined));
   $('latestData').addEventListener('click',()=>setScenario());
+  $('resetAssumptions').addEventListener('click',resetAssumptions);
+  $('compareButton').addEventListener('click',compareScenarios);
   async function loadInstitutionalData(date){
     try{
       const response=await fetchWithTimeout('/api/market-data'+(date?'?date='+encodeURIComponent(date):''),8000);
@@ -520,11 +551,29 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       renderSources();
     }catch(error){$('institutionalData').textContent='Institutional data unavailable; editable fallback assumptions remain active.';renderSources();}
   }
+  async function scenarioSnapshot(date){
+    const fred=await Promise.all(Object.entries(fredSeries).map(async ([key,series])=>[key,await fredLatest(series.id,date)]));
+    const values=Object.fromEntries(fred);
+    const institutional=await (await fetchWithTimeout('/api/market-data'+(date?'?date='+encodeURIComponent(date):''))).json();
+    const cape=Number(institutional.cape.value);
+    const inflation=values.infl.value;
+    return {date:date||'Latest',treasury:values.refG.value,aa:values.refC.value,inflation,cape,equity:100/cape+inflation};
+  }
+  async function compareScenarios(){
+    const date=$('compareScenario').value, out=$('compareOutput');
+    out.textContent='Loading comparison...';
+    try{
+      const [historical,latest]=await Promise.all([scenarioSnapshot(date),scenarioSnapshot()]);
+      const rows=[['30-year Treasury',historical.treasury,latest.treasury,'%'],['AA corporate',historical.aa,latest.aa,'%'],['Expected inflation',historical.inflation,latest.inflation,'%'],['Shiller CAPE',historical.cape,latest.cape,'x'],['Expected equity return',historical.equity,latest.equity,'%']];
+      out.innerHTML='<strong>'+date+' versus Latest</strong><table><thead><tr><th>Variable</th><th>'+date+'</th><th>Latest</th><th>Change</th></tr></thead><tbody>'+rows.map(row=>'<tr><td>'+row[0]+'</td><td>'+fmt(row[1])+row[3]+'</td><td>'+fmt(row[2])+row[3]+'</td><td>'+pct(row[2]-row[1])+'</td></tr>').join('')+'</tbody></table>';
+    }catch(error){out.textContent='Comparison unavailable. Try again when market data has loaded.';}
+  }
   function cmpAll(){const o=dots();alloc(o.c,o.eq,o.tg)}
   function all(){upd();mec();derisk()}
   document.addEventListener('input',e=>{
     const k=e.target.dataset&&e.target.dataset.key; if(!k||!P[k]||e.target.tagName!=='INPUT')return;
     S[k]=parseFloat(e.target.value);
+    if(marketKeys.includes(k))setMarketMode('manual');
     try{localStorage.setItem('pim-'+k,S[k])}catch(err){}
     document.querySelectorAll('input[data-key="'+k+'"]').forEach(i=>{if(i!==e.target)i.value=S[k]});
     document.querySelectorAll('output[data-key="'+k+'"]').forEach(o=>o.textContent=show(k));
