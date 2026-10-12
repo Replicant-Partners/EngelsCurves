@@ -6,8 +6,5 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test"
-  },
-  "dependencies": {
-    "xlsx": "^0.18.5"
   }
 }

@@ -1,11 +1,10 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import XLSX from 'xlsx';
 
 const port = Number(process.env.PORT || 8080);
 const cacheMs = 15 * 60 * 1000;
-const shillerUrl = process.env.SHILLER_URL || 'https://img1.wsimg.com/blobby/go/e5e77e0b-59d1-44d9-ab25-4763ac982e53/downloads/1449043e-a1ed-4e2e-8e9c-7b9a2a064493/ie_data.xls?ver=1791297298731';
 const millimanUrl = process.env.MILLIMAN_URL || 'https://www.milliman.com/en/insight/pension-funding-index-october-2026';
+const shillerData = JSON.parse(await readFile('data/shiller-cape.json', 'utf8'));
 let cached;
 let cachedAt = 0;
 
@@ -14,26 +13,16 @@ function number(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-async function getShillerCape(cutoff) {
-  const response = await fetch(shillerUrl, { redirect: 'follow' });
-  if (!response.ok) throw new Error(`Shiller returned ${response.status}`);
-  const workbook = XLSX.read(Buffer.from(await response.arrayBuffer()), { type: 'buffer' });
-  const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === 'data') || workbook.SheetNames[0];
-  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { range: 7, defval: null });
-  const capeKey = Object.keys(rows[0] || {}).find(key => key.toLowerCase().includes('cape'));
-  const dateKey = Object.keys(rows[0] || {}).find(key => key.toLowerCase() === 'date');
-  if (!capeKey || !dateKey) throw new Error('Shiller CAPE column not found');
-  const row = [...rows].reverse().find(item => {
-    if (number(item[capeKey]) === null) return false;
+function getShillerCape(cutoff) {
+  const row = [...shillerData.data].reverse().find(item => {
     if (!cutoff) return true;
-    const rawDate = String(item[dateKey]);
-    const match = rawDate.match(/(\d{4})[.\/-](\d{1,2})?/);
+    const match = String(item.date).match(/(\d{4})[.\/-](\d{1,2})?/);
     if (!match) return false;
     const month = String(match[2] || '1').padStart(2, '0');
     return `${match[1]}-${month}-01` <= cutoff;
   });
   if (!row) throw new Error('Shiller CAPE observation not found for selected date');
-  return { value: number(row[capeKey]), date: String(row[dateKey]), source: shillerUrl };
+  return { value: row.value, date: row.date, source: shillerData.source, snapshotRetrievedAt: shillerData.retrievedAt };
 }
 
 async function getMilliman() {
