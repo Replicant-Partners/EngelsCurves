@@ -69,6 +69,11 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
 .ctrls input[type=range]{width:100%;accent-color:var(--red);margin:0}
   .data-status{font-size:14px;color:var(--gray);border-left:2px solid var(--red);padding-left:10px;max-width:52rem}
   .data-status strong{color:var(--ink);font-weight:400}
+  .data-tools{display:flex;align-items:center;gap:16px;flex-wrap:wrap;max-width:52rem;font-size:14px}
+  .data-tools label{display:flex;align-items:center;gap:7px;color:var(--gray)}
+  .data-tools input[type=date],.data-tools button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--hair);padding:4px 7px}
+  .data-tools button{cursor:pointer}
+  .data-tools button:hover{border-color:var(--ink)}
 input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
 @media (max-width:760px){
   .row{grid-template-columns:minmax(0,1fr)}
@@ -81,7 +86,11 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   <header>
     <h1>Pension immunization</h1>
     <p class="sub">Interest rates, long-dated liabilities and asset allocation</p>
-    <div id="dataStatus" class="data-status" role="status">Loading latest market data…</div>
+    <div class="data-tools">
+      <div id="dataStatus" class="data-status" role="status">Loading latest market data…</div>
+      <label for="valuationDate">Valuation date <input id="valuationDate" type="date"></label>
+      <button id="latestData" type="button">Use latest</button>
+    </div>
     <ol class="toc">
       <li><a href="#supuestos"><span>a</span>Assumptions</a></li>
       <li><a href="#fondeo"><span>i</span>Funded status</a></li>
@@ -386,8 +395,9 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     infl:{id:'T10YIE',label:'10-year expected inflation'},
     cpi:{id:'CPIAUCSL',label:'CPI-U'}
   };
-  async function fredLatest(id){
-    const response=await fetch('https://fred.stlouisfed.org/graph/fredgraph.csv?id='+id);
+  async function fredLatest(id,date){
+    const end=date?'&coed='+encodeURIComponent(date):'';
+    const response=await fetch('https://fred.stlouisfed.org/graph/fredgraph.csv?id='+id+end);
     if(!response.ok)throw new Error(id+' returned '+response.status);
     const rows=(await response.text()).trim().split(/\\r?\\n/).slice(1).reverse();
     for(const row of rows){
@@ -399,8 +409,10 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     }
     throw new Error('No observation for '+id);
   }
-  async function loadLiveData(){
-    const results=await Promise.allSettled(Object.entries(fredSeries).map(async ([key,series])=>[key,series,await fredLatest(series.id)]));
+  async function loadLiveData(date){
+    const label=date?'historical data through '+date:'latest available data';
+    $('dataStatus').textContent='Loading '+label+'…';
+    const results=await Promise.allSettled(Object.entries(fredSeries).map(async ([key,series])=>[key,series,await fredLatest(series.id,date)]));
     const observations=[];
     for(const result of results){
       if(result.status!=='fulfilled')continue;
@@ -410,9 +422,11 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     }
     if(observations.length){
       syncControls();drawRefs();all();cmpAll();
-      $('dataStatus').innerHTML='<strong>Live market data:</strong> '+observations.join(' · ')+' · Source: FRED';
+      $('dataStatus').innerHTML='<strong>'+label+':</strong> '+observations.join(' · ')+' · Source: FRED';
     }else $('dataStatus').textContent='Live data unavailable; showing saved or illustrative assumptions.';
   }
+  $('valuationDate').addEventListener('change',e=>loadLiveData(e.target.value||undefined));
+  $('latestData').addEventListener('click',()=>{ $('valuationDate').value=''; loadLiveData(); });
   function cmpAll(){const o=dots();alloc(o.c,o.eq,o.tg)}
   function all(){upd();mec();derisk()}
   document.addEventListener('input',e=>{
