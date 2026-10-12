@@ -1,6 +1,10 @@
-FROM nginx:alpine
+FROM node:22-alpine
 
-COPY index.html /usr/share/nginx/html/index.html
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+WORKDIR /app
+COPY package.json ./
+RUN npm install --omit=dev
+COPY index.html server.js ./
 
+ENV PORT=8080
 EXPOSE 8080
+CMD ["npm", "start"]

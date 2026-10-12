@@ -74,6 +74,8 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
   .data-tools input[type=date],.data-tools button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--hair);padding:4px 7px}
   .data-tools button{cursor:pointer}
   .data-tools button:hover{border-color:var(--ink)}
+  .institutional-data{font-size:14px;color:var(--gray);border-top:1px solid var(--hair);padding-top:10px;max-width:52rem}
+  .institutional-data strong{color:var(--ink);font-weight:400}
 input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
 @media (max-width:760px){
   .row{grid-template-columns:minmax(0,1fr)}
@@ -186,6 +188,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       <p>Pension funds are among the largest LPs in the world, so a change in their allocation moves very significant capital flows. If they rebalance toward fixed income, demand for long-duration bonds rises, which tends to push their yields down and flatten the long end of the curve. At the same time, equity selling weighs on valuations, and alternative assets such as private equity and VC compete for a smaller slice of the portfolio, since their appeal was precisely to deliver returns above the actuarial target when bonds fell short. For a fund like Axolotl, this means a tougher fundraising environment and LPs who measure every proposal against what they can now earn in bonds with almost no risk.</p>
       <aside></aside>
     </div>
+    <div id="institutionalData" class="institutional-data">Loading Shiller and Milliman data…</div>
   </section>
 </article>
 
@@ -427,6 +430,21 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   }
   $('valuationDate').addEventListener('change',e=>loadLiveData(e.target.value||undefined));
   $('latestData').addEventListener('click',()=>{ $('valuationDate').value=''; loadLiveData(); });
+  async function loadInstitutionalData(){
+    try{
+      const response=await fetch('/api/market-data');
+      if(!response.ok)throw new Error('API returned '+response.status);
+      const data=await response.json();
+      if(Number.isFinite(data.cape.value)){
+        S.cape=data.cape.value;syncControls();cmpAll();
+      }
+      const parts=[];
+      if(Number.isFinite(data.cape.value))parts.push('<strong>Shiller CAPE:</strong> '+fmt(data.cape.value)+'× ('+data.cape.date+')');
+      if(Number.isFinite(data.milliman.fundedRatio))parts.push('<strong>Milliman 100 PFI:</strong> '+fmt(data.milliman.fundedRatio)+'% funded ('+data.milliman.asOf+')');
+      if(Number.isFinite(data.milliman.discountRate))parts.push('discount rate '+fmt(data.milliman.discountRate)+'%');
+      $('institutionalData').innerHTML=parts.length?parts.join(' · ')+' · <a href="'+(data.cape.source||data.milliman.source)+'" target="_blank" rel="noreferrer">sources</a>':'Institutional data unavailable; editable fallback assumptions remain active.';
+    }catch(error){$('institutionalData').textContent='Institutional data unavailable; editable fallback assumptions remain active.';}
+  }
   function cmpAll(){const o=dots();alloc(o.c,o.eq,o.tg)}
   function all(){upd();mec();derisk()}
   document.addEventListener('input',e=>{
@@ -439,6 +457,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   });
   drawRefs();all();cmpAll();
   loadLiveData();
+  loadInstitutionalData();
 })();
 </script>
 
