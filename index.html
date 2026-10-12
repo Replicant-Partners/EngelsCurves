@@ -356,7 +356,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     if(f(hi)<0){out.textContent=cb>=100?'At a 100% hedge ratio your plan is fully immunized and its funded status stays close to 100% whatever the rate, so it no longer needs a de-risking rule.':'At a '+cb+'% hedge ratio your plan does not reach the '+fmt(t)+'% trigger within a reasonable range of rates.';return}
     for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(f(mid)>0)hi=mid;else lo=mid}
     const rc=100*hi, cur=val('r');
-    out.innerHTML='At a '+cb+'% hedge ratio your plan is <span class="r">'+fmt(fP(cur/100))+'%</span> funded at the chosen rate and crosses the '+fmt(t)+'% trigger when the discount rate reaches <span class="r">'+fmt(rc)+'%</span>. '+
+    out.innerHTML='At a '+cb+'% hedge ratio and a selected discount rate of <span class="r">'+fmt(cur)+'%</span>, your plan is <span class="r">'+fmt(fP(cur/100))+'%</span> funded. It reaches the '+fmt(t)+'% de-risking trigger when the discount rate is <span class="r">'+fmt(rc)+'%</span>. '+
       (cur>=rc?'Since the chosen rate of '+fmt(cur)+'% is already above that level, its rule would call for raising the hedge ratio now to lock in the gain.':'Since the chosen rate of '+fmt(cur)+'% is still below that level, the plan remains exposed to falling rates, and the lower the hedge ratio, the larger that exposure.');
   }
 
