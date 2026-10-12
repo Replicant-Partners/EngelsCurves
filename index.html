@@ -428,11 +428,11 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       $('dataStatus').innerHTML='<strong>'+label+':</strong> '+observations.join(' · ')+' · Source: FRED';
     }else $('dataStatus').textContent='Live data unavailable; showing saved or illustrative assumptions.';
   }
-  $('valuationDate').addEventListener('change',e=>loadLiveData(e.target.value||undefined));
-  $('latestData').addEventListener('click',()=>{ $('valuationDate').value=''; loadLiveData(); });
-  async function loadInstitutionalData(){
+  $('valuationDate').addEventListener('change',e=>{const date=e.target.value||undefined;loadLiveData(date);loadInstitutionalData(date)});
+  $('latestData').addEventListener('click',()=>{ $('valuationDate').value=''; loadLiveData(); loadInstitutionalData(); });
+  async function loadInstitutionalData(date){
     try{
-      const response=await fetch('/api/market-data');
+      const response=await fetch('/api/market-data'+(date?'?date='+encodeURIComponent(date):''));
       if(!response.ok)throw new Error('API returned '+response.status);
       const data=await response.json();
       if(Number.isFinite(data.cape.value)){
@@ -442,7 +442,9 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       if(Number.isFinite(data.cape.value))parts.push('<strong>Shiller CAPE:</strong> '+fmt(data.cape.value)+'× ('+data.cape.date+')');
       if(Number.isFinite(data.milliman.fundedRatio))parts.push('<strong>Milliman 100 PFI:</strong> '+fmt(data.milliman.fundedRatio)+'% funded ('+data.milliman.asOf+')');
       if(Number.isFinite(data.milliman.discountRate))parts.push('discount rate '+fmt(data.milliman.discountRate)+'%');
-      $('institutionalData').innerHTML=parts.length?parts.join(' · ')+' · <a href="'+(data.cape.source||data.milliman.source)+'" target="_blank" rel="noreferrer">sources</a>':'Institutional data unavailable; editable fallback assumptions remain active.';
+      if(data.milliman.unavailableForHistoricalDate)parts.push('Milliman latest report hidden for historical consistency');
+      const source=data.cape.source||data.milliman.source;
+      $('institutionalData').innerHTML=parts.length?parts.join(' · ')+' · <a href="'+source+'" target="_blank" rel="noreferrer">sources</a>':'Institutional data unavailable; editable fallback assumptions remain active.';
     }catch(error){$('institutionalData').textContent='Institutional data unavailable; editable fallback assumptions remain active.';}
   }
   function cmpAll(){const o=dots();alloc(o.c,o.eq,o.tg)}

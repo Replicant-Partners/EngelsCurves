@@ -14,7 +14,7 @@ function number(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-async function getShillerCape() {
+async function getShillerCape(cutoff) {
   const response = await fetch(shillerUrl, { redirect: 'follow' });
   if (!response.ok) throw new Error(`Shiller returned ${response.status}`);
   const workbook = XLSX.read(Buffer.from(await response.arrayBuffer()), { type: 'buffer' });
@@ -23,8 +23,16 @@ async function getShillerCape() {
   const capeKey = Object.keys(rows[0] || {}).find(key => key.toLowerCase().includes('cape'));
   const dateKey = Object.keys(rows[0] || {}).find(key => key.toLowerCase() === 'date');
   if (!capeKey || !dateKey) throw new Error('Shiller CAPE column not found');
-  const row = [...rows].reverse().find(item => number(item[capeKey]) !== null);
-  if (!row) throw new Error('Shiller CAPE observation not found');
+  const row = [...rows].reverse().find(item => {
+    if (number(item[capeKey]) === null) return false;
+    if (!cutoff) return true;
+    const rawDate = String(item[dateKey]);
+    const match = rawDate.match(/(\d{4})[.\/-](\d{1,2})?/);
+    if (!match) return false;
+    const month = String(match[2] || '1').padStart(2, '0');
+    return `${match[1]}-${month}-01` <= cutoff;
+  });
+  if (!row) throw new Error('Shiller CAPE observation not found for selected date');
   return { value: number(row[capeKey]), date: String(row[dateKey]), source: shillerUrl };
 }
 
@@ -43,24 +51,31 @@ async function getMilliman() {
   };
 }
 
-async function marketData() {
-  if (cached && Date.now() - cachedAt < cacheMs) return cached;
-  const [cape, milliman] = await Promise.allSettled([getShillerCape(), getMilliman()]);
-  cached = {
+async function marketData(cutoff) {
+  const cacheKey = cutoff || 'latest';
+  if (cached?.key === cacheKey && Date.now() - cachedAt < cacheMs) return cached.value;
+  const cape = await Promise.allSettled([getShillerCape(cutoff)]);
+  const milliman = cutoff ? { status: 'fulfilled', value: { unavailableForHistoricalDate: true } } : await Promise.allSettled([getMilliman()]).then(result => result[0]);
+  const value = {
     retrievedAt: new Date().toISOString(),
-    cape: cape.status === 'fulfilled' ? cape.value : { error: cape.reason.message },
+    valuationDate: cutoff || null,
+    cape: cape[0].status === 'fulfilled' ? cape[0].value : { error: cape[0].reason.message },
     milliman: milliman.status === 'fulfilled' ? milliman.value : { error: milliman.reason.message }
   };
+  cached = { key: cacheKey, value };
   cachedAt = Date.now();
-  return cached;
+  return value;
 }
 
 const server = createServer(async (request, response) => {
   try {
-    if (request.url === '/api/market-data') {
+    if (request.url?.startsWith('/api/market-data')) {
+      const url = new URL(request.url, `http://${request.headers.host}`);
+      const cutoff = url.searchParams.get('date') || undefined;
+      if (cutoff && !/^\d{4}-\d{2}-\d{2}$/.test(cutoff)) throw new Error('Invalid date');
       response.setHeader('Content-Type', 'application/json; charset=utf-8');
       response.setHeader('Cache-Control', 'public, max-age=900');
-      response.end(JSON.stringify(await marketData()));
+      response.end(JSON.stringify(await marketData(cutoff)));
       return;
     }
     if (request.url === '/' || request.url === '/index.html') {
