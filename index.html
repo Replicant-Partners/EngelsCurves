@@ -74,6 +74,17 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
   .data-tools input[type=date],.data-tools button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--hair);padding:4px 7px}
   .data-tools button{cursor:pointer}
   .data-tools button:hover{border-color:var(--ink)}
+  .scenario-tools{display:flex;gap:7px;flex-wrap:wrap;max-width:52rem}
+  .scenario-tools button{font:inherit;font-size:14px;color:var(--ink);background:transparent;border:1px solid var(--hair);padding:4px 8px;cursor:pointer}
+  .scenario-tools button:hover,.scenario-tools button.active{border-color:var(--red);color:var(--red)}
+  .sources{max-width:70rem;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding-block:9px}
+  .sources summary{cursor:pointer;font-size:15px;color:var(--gray)}
+  .sources table{font-size:13px;margin-top:9px;width:100%}
+  .sources th,.sources td{padding:4px 10px 4px 0;text-align:left;white-space:nowrap}
+  .sources thead th{font-style:italic}
+  .sources tbody td{border-bottom:1px solid var(--hair)}
+  .sources .kind-observed{color:var(--ink)}
+  .sources .kind-assumption{color:var(--red)}
   .institutional-data{font-size:14px;color:var(--gray);border-top:1px solid var(--hair);padding-top:10px;max-width:52rem}
   .institutional-data strong{color:var(--ink);font-weight:400}
 input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
@@ -93,6 +104,17 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       <label for="valuationDate">Valuation date <input id="valuationDate" type="date"></label>
       <button id="latestData" type="button">Use latest</button>
     </div>
+    <div class="scenario-tools" aria-label="Saved historical scenarios">
+      <button type="button" data-scenario="2000-12-31">2000</button>
+      <button type="button" data-scenario="2007-12-31">2007</button>
+      <button type="button" data-scenario="2019-12-31">2019</button>
+      <button type="button" data-scenario="2021-12-31">2021</button>
+      <button type="button" data-scenario="latest">Latest</button>
+    </div>
+    <details class="sources" open>
+</details>      <summary></summary>Data sources and assumptions</summary>
+      <div class="tbl"><table><thead><tr><th>Variable</th></th><th>Source /</th> series</th><th>Observation</th></th><th></th>Downloaded</th><th>Frequency</th></th><th></th>Units</th><th></th>Type</th></tr></thead><tbody id="sourceRows"></tbody></table></div>
+    </details>
     <ol class="toc">
       <li><a href="#supuestos"><span>a</span>Assumptions</a></li>
       <li><a href="#fondeo"><span>i</span>Funded status</a></li>
@@ -394,6 +416,20 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     document.querySelectorAll('input[data-key]').forEach(i=>i.value=S[i.dataset.key]);
     document.querySelectorAll('output[data-key]').forEach(o=>o.textContent=show(o.dataset.key));
   }
+  let liveObservations={};
+  let institutionalData={};
+  const sourceMeta={
+    refG:{label:'30-year Treasury',source:'Federal Reserve / FRED',series:'DGS30',frequency:'Daily',units:'Percent'},
+    refC:{label:'AA corporate',source:'ICE BofA / FRED',series:'BAMLC0A2CAAEY',frequency:'Daily close',units:'Percent'},
+    infl:{label:'Expected inflation',source:'Federal Reserve / FRED',series:'T10YIE',frequency:'Daily',units:'Percent'},
+    cpi:{label:'CPI-U',source:'BLS / FRED',series:'CPIAUCSL',frequency:'Monthly',units:'Index'},
+    cape:{label:'Shiller CAPE',source:'Robert J. Shiller',series:'ie_data.xls / CAPE',frequency:'Monthly',units:'Ratio'},
+    milliman:{label:'Milliman funded ratio',source:'Milliman 100 PFI',series:'Pension Funding Index',frequency:'Monthly',units:'Percent'},
+    r:{label:'Discount rate used',source:'User input',series:'Model assumption',frequency:'—',units:'Percent'},
+    cob:{label:'Liability hedge ratio',source:'User input',series:'Model assumption',frequency:'—',units:'Percent'},
+    tgt:{label:'Actuarial target',source:'User input',series:'Model assumption',frequency:'—',units:'Percent'},
+    thr:{label:'De-risking trigger',source:'User input',series:'Model assumption',frequency:'—',units:'Percent'}
+  };
   const fredSeries={
     refG:{id:'DGS30',label:'30-year Treasury'},
     refC:{id:'BAMLC0A2CAAEY',label:'ICE BofA AA corporate'},
@@ -414,6 +450,18 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     }
     throw new Error('No observation for '+id);
   }
+  function renderSources(){
+    const downloaded=new Date().toISOString().slice(0,10);
+    const rows=[];
+    ['refG','refC','infl','cpi'].forEach(key=>{
+      const meta=sourceMeta[key], obs=liveObservations[key];
+      rows.push({meta,observation:obs?.date||'—',downloaded:obs?downloaded:'—',value:obs?fmt(obs.value):'—',type:'Observed'});
+    });
+    if(institutionalData.cape?.value!=null)rows.push({meta:sourceMeta.cape,observation:institutionalData.cape.date,downloaded:institutionalData.retrievedAt?.slice(0,10)||downloaded,value:fmt(institutionalData.cape.value)+'×',type:'Observed'});
+    if(institutionalData.milliman?.fundedRatio!=null)rows.push({meta:sourceMeta.milliman,observation:institutionalData.milliman.asOf||'—',downloaded:institutionalData.retrievedAt?.slice(0,10)||downloaded,value:fmt(institutionalData.milliman.fundedRatio),type:'Observed'});
+    ['r','cob','tgt','thr'].forEach(key=>rows.push({meta:sourceMeta[key],observation:'—',downloaded:'—',value:show(key),type:'Assumption'}));
+    $('sourceRows').innerHTML=rows.map(row=>'<tr><td>'+row.meta.label+' ('+row.value+')</td><td>'+row.meta.source+'</td><td>'+row.observation+'</td><td>'+row.downloaded+'</td><td>'+row.meta.frequency+'</td><td>'+row.meta.units+'</td><td class="kind-'+row.type.toLowerCase()+'">'+row.type+'</td></tr>').join('');
+  }
   async function loadLiveData(date){
     const label=date?'historical data through '+date:'latest available data';
     $('dataStatus').textContent='Loading '+label+'…';
@@ -423,20 +471,29 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       if(result.status!=='fulfilled')continue;
       const [key,series,observation]=result.value;
       observations.push(series.label+' '+observation.date);
+      liveObservations[key]=observation;
       if(key!=='cpi')S[key]=observation.value;
     }
     if(observations.length){
       syncControls();drawRefs();all();cmpAll();
       $('dataStatus').innerHTML='<strong>'+label+':</strong> '+observations.join(' · ')+' · Source: FRED';
     }else $('dataStatus').textContent='Live data unavailable; showing saved or illustrative assumptions.';
+    renderSources();
   }
-  $('valuationDate').addEventListener('change',e=>{const date=e.target.value||undefined;loadLiveData(date);loadInstitutionalData(date)});
-  $('latestData').addEventListener('click',()=>{ $('valuationDate').value=''; loadLiveData(); loadInstitutionalData(); });
+  function setScenario(date){
+    document.querySelectorAll('[data-scenario]').forEach(button=>button.classList.toggle('active',button.dataset.scenario===(date||'latest')));
+    $('valuationDate').value=date||'';
+    loadLiveData(date);loadInstitutionalData(date);
+  }
+  document.querySelectorAll('[data-scenario]').forEach(button=>button.addEventListener('click',()=>setScenario(button.dataset.scenario==='latest'?undefined:button.dataset.scenario)));
+  $('valuationDate').addEventListener('change',e=>setScenario(e.target.value||undefined));
+  $('latestData').addEventListener('click',()=>setScenario());
   async function loadInstitutionalData(date){
     try{
       const response=await fetch('/api/market-data'+(date?'?date='+encodeURIComponent(date):''));
       if(!response.ok)throw new Error('API returned '+response.status);
       const data=await response.json();
+      institutionalData=data;
       if(Number.isFinite(data.cape.value)){
         S.cape=data.cape.value;syncControls();cmpAll();
       }
@@ -447,7 +504,8 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       if(data.milliman.unavailableForHistoricalDate)parts.push('Milliman latest report hidden for historical consistency');
       const source=data.cape.source||data.milliman.source;
       $('institutionalData').innerHTML=parts.length?parts.join(' · ')+' · <a href="'+source+'" target="_blank" rel="noreferrer">sources</a>':'Institutional data unavailable; editable fallback assumptions remain active.';
-    }catch(error){$('institutionalData').textContent='Institutional data unavailable; editable fallback assumptions remain active.';}
+      renderSources();
+    }catch(error){$('institutionalData').textContent='Institutional data unavailable; editable fallback assumptions remain active.';renderSources();}
   }
   function cmpAll(){const o=dots();alloc(o.c,o.eq,o.tg)}
   function all(){upd();mec();derisk()}
@@ -457,11 +515,10 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     try{localStorage.setItem('pim-'+k,S[k])}catch(err){}
     document.querySelectorAll('input[data-key="'+k+'"]').forEach(i=>{if(i!==e.target)i.value=S[k]});
     document.querySelectorAll('output[data-key="'+k+'"]').forEach(o=>o.textContent=show(k));
-    drawRefs();all();cmpAll();
+    drawRefs();all();cmpAll();renderSources();
   });
   drawRefs();all();cmpAll();
-  loadLiveData();
-  loadInstitutionalData();
+  setScenario();
 })();
 </script>
 
