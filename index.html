@@ -308,10 +308,10 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   const refs=[{id:'refG',name:'30y UST'},{id:'refC',name:'AA'}];
   function drawRefs(){
     while(refLayer.firstChild)refLayer.removeChild(refLayer.firstChild);
-    refs.forEach(o=>{
+    refs.forEach((o,i)=>{
       const v=val(o.id); if(!isFinite(v)||v<xmin||v>xmax)return;
       mk(refLayer,'line',{x1:X(v),x2:X(v),y1:Y(ymax),y2:Y(ymin),stroke:HAIR,'stroke-width':1});
-      mk(refLayer,'text',{x:X(v),y:Y(ymax)-4,'text-anchor':'middle',class:'t'},o.name+' '+fmt(v)+'%');
+      mk(refLayer,'text',{x:X(v),y:Y(ymax)+18+i*16,'text-anchor':'middle',class:'t'},o.name+' '+fmt(v)+'%');
     });
   }
   function upd(){
