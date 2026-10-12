@@ -69,6 +69,7 @@ const server = createServer(async (request, response) => {
     }
     if (request.url === '/' || request.url === '/index.html') {
       response.setHeader('Content-Type', 'text/html; charset=utf-8');
+      response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       response.end(await readFile('index.html'));
       return;
     }
