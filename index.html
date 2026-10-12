@@ -67,6 +67,8 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
 .ctrls .hd{display:flex;justify-content:space-between;gap:8px;font-style:italic;color:var(--gray)}
 .ctrls .hd output{font-style:normal;color:var(--red);font-variant-numeric:lining-nums tabular-nums}
 .ctrls input[type=range]{width:100%;accent-color:var(--red);margin:0}
+  .data-status{font-size:14px;color:var(--gray);border-left:2px solid var(--red);padding-left:10px;max-width:52rem}
+  .data-status strong{color:var(--ink);font-weight:400}
 input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
 @media (max-width:760px){
   .row{grid-template-columns:minmax(0,1fr)}
@@ -79,6 +81,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   <header>
     <h1>Pension immunization</h1>
     <p class="sub">Interest rates, long-dated liabilities and asset allocation</p>
+    <div id="dataStatus" class="data-status" role="status">Loading latest market data…</div>
     <ol class="toc">
       <li><a href="#supuestos"><span>a</span>Assumptions</a></li>
       <li><a href="#fondeo"><span>i</span>Funded status</a></li>
@@ -373,6 +376,43 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       (eq<=tg?' Because your equity assumption sits below the target, its curve does not appear on the chart.':'');
   }
 
+  function syncControls(){
+    document.querySelectorAll('input[data-key]').forEach(i=>i.value=S[i.dataset.key]);
+    document.querySelectorAll('output[data-key]').forEach(o=>o.textContent=show(o.dataset.key));
+  }
+  const fredSeries={
+    refG:{id:'DGS30',label:'30-year Treasury'},
+    refC:{id:'BAMLC0A2CAAEY',label:'ICE BofA AA corporate'},
+    infl:{id:'T10YIE',label:'10-year expected inflation'},
+    cpi:{id:'CPIAUCSL',label:'CPI-U'}
+  };
+  async function fredLatest(id){
+    const response=await fetch('https://fred.stlouisfed.org/graph/fredgraph.csv?id='+id);
+    if(!response.ok)throw new Error(id+' returned '+response.status);
+    const rows=(await response.text()).trim().split(/\\r?\\n/).slice(1).reverse();
+    for(const row of rows){
+      const comma=row.indexOf(',');
+      if(comma<0)continue;
+      const date=row.slice(0,comma), raw=row.slice(comma+1).trim();
+      const value=Number(raw);
+      if(date&&raw&&raw!=='.'&&Number.isFinite(value))return {value,date};
+    }
+    throw new Error('No observation for '+id);
+  }
+  async function loadLiveData(){
+    const results=await Promise.allSettled(Object.entries(fredSeries).map(async ([key,series])=>[key,series,await fredLatest(series.id)]));
+    const observations=[];
+    for(const result of results){
+      if(result.status!=='fulfilled')continue;
+      const [key,series,observation]=result.value;
+      observations.push(series.label+' '+observation.date);
+      if(key!=='cpi')S[key]=observation.value;
+    }
+    if(observations.length){
+      syncControls();drawRefs();all();cmpAll();
+      $('dataStatus').innerHTML='<strong>Live market data:</strong> '+observations.join(' · ')+' · Source: FRED';
+    }else $('dataStatus').textContent='Live data unavailable; showing saved or illustrative assumptions.';
+  }
   function cmpAll(){const o=dots();alloc(o.c,o.eq,o.tg)}
   function all(){upd();mec();derisk()}
   document.addEventListener('input',e=>{
@@ -384,6 +424,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     drawRefs();all();cmpAll();
   });
   drawRefs();all();cmpAll();
+  loadLiveData();
 })();
 </script>
 
