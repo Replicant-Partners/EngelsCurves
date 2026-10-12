@@ -87,6 +87,8 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
   .sources .kind-assumption{color:var(--red)}
   .institutional-data{font-size:14px;color:var(--gray);border-top:1px solid var(--hair);padding-top:10px;max-width:52rem}
   .institutional-data strong{color:var(--ink);font-weight:400}
+  .market-note{border-left:2px solid var(--red);padding:9px 12px;max-width:52rem;font-size:15px;color:var(--gray)}
+  .market-note strong{color:var(--ink);font-weight:400}
 input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
 @media (max-width:760px){
   .row{grid-template-columns:minmax(0,1fr)}
@@ -147,8 +149,9 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
     <h2><span class="num">a</span>Assumptions</h2>
     <div class="row">
       <p>Every assumption is set with the sliders in this table, and each chart recalculates instantly. The sliders that affect each chart are repeated below it, so you can move them and see the change without scrolling back up. The example plan must pay 1 million a year for 30 years and is 100% funded at a 5% discount rate.<sup>2</sup></p>
-      <aside><p><span class="n">2</span>The preset market rates, CAPE and inflation are illustrative, not current market data. They should be replaced with live figures from FRED, Bloomberg or the Milliman Pension Funding Index. Your browser remembers the values you choose.</p></aside>
+      <aside><p><span class="n">2</span>The plan cash flows and actuarial settings are modeling assumptions. Market observations are loaded separately from FRED and Shiller; changing a market slider creates a manual scenario.</p></aside>
     </div>
+    <div class="market-note"><strong>Before changing a market variable:</strong> Treasury, AA corporate, CAPE and expected inflation are current observed inputs for the selected valuation date. Moving one of those sliders overrides the observed value for a manual scenario; click a historical year or <em>Latest</em> to restore source data.</div>
     <div class="tbl">
       <table class="assume">
         <thead><tr><th>Assumption</th><th>Value</th><th style="text-align:left;padding-left:8px">Used in</th></tr></thead>
