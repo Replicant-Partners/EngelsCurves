@@ -13,6 +13,24 @@ function number(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+const fredAllowlist = new Set(['DGS30', 'BAMLC0A2CAAEY', 'T10YIE', 'CPIAUCSL']);
+async function fredLatest(id, cutoff) {
+  if (!fredAllowlist.has(id)) throw new Error('Unsupported FRED series');
+  const end = cutoff ? `&coed=${encodeURIComponent(cutoff)}` : '';
+  const response = await fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}${end}`);
+  if (!response.ok) throw new Error(`FRED ${id} returned ${response.status}`);
+  const rows = (await response.text()).trim().split(/\r?\n/).slice(1).reverse();
+  for (const row of rows) {
+    const comma = row.indexOf(',');
+    if (comma < 0) continue;
+    const date = row.slice(0, comma);
+    const raw = row.slice(comma + 1).trim();
+    const value = number(raw);
+    if (date && raw !== '.' && value !== null) return { id, value, date, retrievedAt: new Date().toISOString() };
+  }
+  throw new Error(`No FRED observation for ${id}`);
+}
+
 function getShillerCape(cutoff) {
   const row = [...shillerData.data].reverse().find(item => {
     if (!cutoff) return true;
@@ -58,6 +76,16 @@ async function marketData(cutoff) {
 
 const server = createServer(async (request, response) => {
   try {
+    if (request.url?.startsWith('/api/fred')) {
+      const url = new URL(request.url, `http://${request.headers.host}`);
+      const id = url.searchParams.get('id');
+      const cutoff = url.searchParams.get('date') || undefined;
+      if (cutoff && !/^\d{4}-\d{2}-\d{2}$/.test(cutoff)) throw new Error('Invalid date');
+      response.setHeader('Content-Type', 'application/json; charset=utf-8');
+      response.setHeader('Cache-Control', 'public, max-age=900');
+      response.end(JSON.stringify(await fredLatest(id, cutoff)));
+      return;
+    }
     if (request.url?.startsWith('/api/market-data')) {
       const url = new URL(request.url, `http://${request.headers.host}`);
       const cutoff = url.searchParams.get('date') || undefined;

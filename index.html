@@ -454,7 +454,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
   }
   async function fredLatest(id,date){
     const end=date?'&coed='+encodeURIComponent(date):'';
-    const response=await fetchWithTimeout('https://fred.stlouisfed.org/graph/fredgraph.csv?id='+id+end);
+    const response=await fetchWithTimeout('/api/fred?id='+encodeURIComponent(id)+(date?'&date='+encodeURIComponent(date):''));
     if(!response.ok)throw new Error(id+' returned '+response.status);
     const rows=(await response.text()).trim().split(/\r?\n/).slice(1).reverse();
     for(const row of rows){
