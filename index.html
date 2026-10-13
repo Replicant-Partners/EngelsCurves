@@ -102,6 +102,11 @@ input.n:focus-visible{outline:1px solid var(--red);outline-offset:2px}
   .market-note strong{color:var(--ink);font-weight:400}
   .evidence-summary{display:flex;gap:14px;align-items:baseline;border-left:2px solid var(--red);padding:9px 12px;max-width:52rem;color:var(--gray)}
   .evidence-summary strong{color:var(--ink);font-weight:400}
+  .evidence-inputs{max-width:70rem;border-top:1px solid var(--hair);padding-top:12px}
+  .evidence-inputs h3{font-size:20px;font-weight:400;font-style:italic;margin:0 0 5px}
+  .evidence-inputs p{font-size:15px;color:var(--gray);margin:0 0 8px}
+  .evidence-inputs table{font-size:13px;width:100%}
+  .evidence-inputs th,.evidence-inputs td{padding:4px 12px 4px 0;text-align:left;border-bottom:1px solid var(--hair)}
   .evidence-table{font-size:14px;width:100%;max-width:70rem}
   .evidence-table th,.evidence-table td{padding:6px 12px 6px 0;text-align:left;border-bottom:1px solid var(--hair);vertical-align:top}
   .evidence-table th{font-style:italic}
@@ -269,6 +274,15 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       <aside><p>Indirect signals cannot identify pension trades by themselves. Confidence increases only when several independent signals point in the same direction.</p></aside>
     </div>
     <div class="evidence-summary"><strong id="evidenceStatus">Loading evidence...</strong><span id="evidenceUpdated"></span></div>
+    <div class="evidence-inputs">
+      <h3>Hyp</h3>othesis inputs</h3>
+      <p>Current test: long-duration pension demand. Formula: 10s30s = DGS30 - DGS10; 2s10s = DGS10 - DGS2. The monitor runs on the latest available observations; a hypothesis closing window is not active yet.</p>
+      <div class="tbl"><table><thead><tr><th>Input</th><th>Series</th><th>Source</th><th>Observation</th><th>Frequency</th><th>Use</th></tr></thead><tbody</th></th></th></th></th></th> id="evidenceInputs">
+        <tr><td>2-year Treasury</td><td>DGS2</td><td>FRED</td><td>Loading...</td><td>Dai</td></td></td></td>ly</td><td>2s10s comp</td>arison</td></tr>
+        <tr><td>10-year Trea</td>sury</td><td>DGS10</td><td>FRED</td><td>Loading...</td><td>Daily</td><td>2s10s and 10s30s</td></tr>
+        <tr><td></td></td></td></td>30</td>-year Treasury</td><td>DGS30</td><td>FRED</</td>td><td>Loading...</</td>td><td></td>Daily</td><td></td>10s30s comparison</td></tr>
+      </tbody></table></div>
+    </div>
     <div class="tbl"><table class="evidence-table"><thead><tr><th>Test</th><th>Expected footprint</th><th>Latest reading</th><th>Status</th><th>Interpretation</th><th></th>Source</th></tr></thead><tbody id="evidenceRows">
       <tr><td>10s30s versus 2s10s</td><td>Long end stays flatter while the 2s10s curve steepens</td><td>Loading...</td><td>Loading</td><td>Waiting for data</td><td></td>FRED</td></tr>
       <tr><td>Pension asset flows</td><td>More Treasury/corporate bonds and fewer equities</td><td>Not integrated</td><td>Unavailable</td><td>Direct flow test not integrated yet</td><td></td>Federal Reserve Z.1</td></tr>
@@ -508,6 +522,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       const values=Object.fromEntries(series), slope10s30s=values.DGS30.value-values.DGS10.value, slope2s10s=values.DGS10.value-values.DGS2.value;
       const supportive=slope10s30s<0&&slope2s10s>0, contradictory=slope10s30s>0&&slope2s10s>0;
       const signal=supportive?'Supportive':contradictory?'Contradictory':'Neutral';
+      $('evidenceInputs').innerHTML='<tr><td>2-year Treasury</td><td>DGS2</td><td>FRED</td><td>'+values.DGS2.date+' ('+fmt(values.DGS2.value)+'%)</td><td>Daily</td><td>2s10s comparison</td></tr><tr><td>10-year Treasury</td><td>DGS10</td><td>FRED</td><td>'+values.DGS10.date+' ('+fmt(values.DGS10.value)+'%)</td><td>Daily</td><td>2s10s and 10s30s</td></tr><tr><td>30-year Treasury</td><td>DGS30</td><td>FRED</td><td>'+values.DGS30.date+' ('+fmt(values.DGS30.value)+'%)</td><td>Daily</td><td>10s30s comparison</td></tr>';
       rows.querySelector('tr').innerHTML='<td>10s30s versus 2s10s</td><td>Long end stays flatter while the 2s10s curve steepens</td><td>10s30s '+fmt(slope10s30s)+' pp; 2s10s '+fmt(slope2s10s)+' pp</td><td class="'+signal.toLowerCase()+'">'+signal+'</td><td>'+(supportive?'Consistent with long-end demand, but not proof of pension buying.':contradictory?'Long-end signal does not support the pension-demand hypothesis.':'No clear pension-demand signal in this observation.')+'</td><td>FRED DGS2, DGS10, DGS30</td>';
       status.textContent='Evidence balance: '+signal;updated.textContent='Latest observations: '+values.DGS30.date;
       $('evidenceInterpretation').textContent=supportive?'The curve configuration is consistent with demand concentrated in the long end, but it is not proof of pension buying.':contradictory?'The long-end signal does not support a pension-demand explanation in this observation.':'The curve does not provide a clear pension-demand signal.';
