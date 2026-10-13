@@ -269,13 +269,13 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       <aside><p>Indirect signals cannot identify pension trades by themselves. Confidence increases only when several independent signals point in the same direction.</p></aside>
     </div>
     <div class="evidence-summary"><strong id="evidenceStatus">Loading evidence...</strong><span id="evidenceUpdated"></span></div>
-    <div class="tbl"><table class="evidence-table"><thead><tr><th>Test</th><th>Expected footprint</th><th>Latest reading</th><th>Status</th><th>Source</th></tr></thead><tbody id="evidenceRows">
-      <tr><td>10s30s versus 2s10s</td><td>Long end stays flatter while the 2s10s curve steepens</td><td>Loading...</td><td>Loading</td><td>FRED</td></tr>
-      <tr><td>Pension asset flows</td><td>More Treasury/corporate bonds and fewer equities</td><td>Not integrated</td><td>Unavailable</td><td>Federal Reserve Z.1</td></tr>
-      <tr><td>Long credit versus intermediate</td><td>Long high-quality credit holds up better</td><td>Not integrated</td><td>Unavailable</td><td>ICE BofA / FRED</td></tr>
-      <tr><td>Long Treasury auctions</td><td>Strong coverage and indirect demand</td><td>Not integrated</td><td>Unavailable</td><td>US Treasury</td></tr>
-      <tr><td>Quarter-end rebalancing</td><td>Equities lag bonds after strong equity quarters</td><td>Not integrated</td><td>Unavailable</td><td>Market data</td></tr>
-      <tr><td>Risk transfers to insurers</td><td>Higher pension risk-transfer volume</td><td>Not integrated</td><td>Unavailable</td><td>LIMRA</td></tr>
+    <div class="tbl"><table class="evidence-table"><thead><tr><th>Test</th><th>Expected footprint</th><th>Latest reading</th><th>Status</th><th>Interpretation</th><th></th>Source</th></tr></thead><tbody id="evidenceRows">
+      <tr><td>10s30s versus 2s10s</td><td>Long end stays flatter while the 2s10s curve steepens</td><td>Loading...</td><td>Loading</td><td>Waiting for data</td><td></td>FRED</td></tr>
+      <tr><td>Pension asset flows</td><td>More Treasury/corporate bonds and fewer equities</td><td>Not integrated</td><td>Unavailable</td><td>Direct flow test not integrated yet</td><td></td>Federal Reserve Z.1</td></tr>
+      <tr><td>Long credit versus intermediate</td><td>Long high-quality credit holds up better</td><td>Not integrated</td><td>Unavailable</td><td>Credit maturity comparison not integrated yet</td><td></td>ICE BofA / FRED</td></tr>
+      <tr><td>Long Treasury auctions</td><td>Strong coverage and indirect demand</td><td>Not integrated</td><td>Unavailable</td><td>Auction-demand test not integrated yet</td><td></td>US Treasury</td></tr>
+      <tr><td>Quarter-end rebalancing</td><td>Equities lag bonds after strong equity quarters</td><td>Not integrated</td><td>Unavailable</td><td>Quarter-end return test not integrated yet</td><td></td>Market data</td></tr>
+      <tr><td>Risk transfers to insurers</td><td>Higher pension risk-transfer volume</td><td>Not integrated</td><td>Unavailable</td><td>Insurance transfer data not integrated yet</td><td></td>LIMRA</td></tr>
     </tbody></table></div>
     <p class="lectura"><b>Interpretation</b><span id="evidenceInterpretation">The monitor is intentionally conservative: unavailable tests are excluded from the evidence balance.</span></p>
   </section>
@@ -508,7 +508,7 @@ input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
       const values=Object.fromEntries(series), slope10s30s=values.DGS30.value-values.DGS10.value, slope2s10s=values.DGS10.value-values.DGS2.value;
       const supportive=slope10s30s<0&&slope2s10s>0, contradictory=slope10s30s>0&&slope2s10s>0;
       const signal=supportive?'Supportive':contradictory?'Contradictory':'Neutral';
-      rows.querySelector('tr').innerHTML='<td>10s30s versus 2s10s</td><td>Long end stays flatter while the 2s10s curve steepens</td><td>10s30s '+fmt(slope10s30s)+' pp; 2s10s '+fmt(slope2s10s)+' pp</td><td class="'+signal.toLowerCase()+'">'+signal+'</td><td>FRED DGS2, DGS10, DGS30</td>';
+      rows.querySelector('tr').innerHTML='<td>10s30s versus 2s10s</td><td>Long end stays flatter while the 2s10s curve steepens</td><td>10s30s '+fmt(slope10s30s)+' pp; 2s10s '+fmt(slope2s10s)+' pp</td><td class="'+signal.toLowerCase()+'">'+signal+'</td><td>'+(supportive?'Consistent with long-end demand, but not proof of pension buying.':contradictory?'Long-end signal does not support the pension-demand hypothesis.':'No clear pension-demand signal in this observation.')+'</td><td>FRED DGS2, DGS10, DGS30</td>';
       status.textContent='Evidence balance: '+signal;updated.textContent='Latest observations: '+values.DGS30.date;
       $('evidenceInterpretation').textContent=supportive?'The curve configuration is consistent with demand concentrated in the long end, but it is not proof of pension buying.':contradictory?'The long-end signal does not support a pension-demand explanation in this observation.':'The curve does not provide a clear pension-demand signal.';
       evidenceLoaded=true;
